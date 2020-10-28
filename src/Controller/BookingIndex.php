@@ -15,13 +15,19 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\Bookings;
+
 
 class BookingIndex extends AbstractController
 {
     /**
      * @Route("/create_booking")
      */
-    public function create_booking()
+    public function create_booking(Request $request)
     {
 
         $form = $this->createFormBuilder()
@@ -70,6 +76,35 @@ class BookingIndex extends AbstractController
             ->add('submit', SubmitType::class, ['label' => 'Create booking'])
             ->getForm();
 
+        if($request->isMethod('POST')){
+            $form->submit($request->request->get($form->getName()));
+            if($form->isSubmitted() && $form->isValid()){
+                $data = $form->getData();
+
+                $entityManager = $this->getDoctrine()->getManager();
+
+                $booking = new Bookings();
+
+                $booking->setFirstName($data['firstName']);
+                $booking->setLastName($data['lastName']);
+                $booking->setPhone($data['phone']);
+                $booking->setEmail($data['email']);
+                $booking->setBirthday(new \DateTime($data['birthday']->format('Y-m-d')));
+                $booking->setStartDate(new \DateTime($data['startDate']->format('Y-m-d ')));
+                $booking->setEndDate(new \DateTime($data['endDate']->format('Y-m-d')));
+                $booking->setArrivalTime(new \DateTime($data['arrivalTime']->format('H:i:s')));
+                $booking->setnrOfPeople($data['nrOfPeople']);
+                $booking->setPayingMethod($data['payingMethod']);
+                $booking->setAdditionalInformation($data['additionalInformation']);
+
+                $entityManager->persist($booking);
+
+                $entityManager->flush();
+
+                return $this->redirectToRoute('bookings');
+            }
+        }
+
         return $this->render('bookings/create_booking.html.twig', [
             'form' => $form->createView(),
         ]);
@@ -77,7 +112,7 @@ class BookingIndex extends AbstractController
     }
 
     /**
-     * @Route("/bookings")
+     * @Route("/bookings", name="bookings")
      */
     public function bookings()
     {
